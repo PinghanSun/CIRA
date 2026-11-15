@@ -1,4 +1,5 @@
 """Recorded proposals and exact state inheritance, separate from execution."""
+
 from __future__ import annotations
 import random
 from dataclasses import dataclass, asdict, replace
@@ -43,13 +44,22 @@ class Proposal:
         return digest(asdict(self))
 
     def tie_key(self, type_order=TYPES):
-        return (type_order.index(self.type), self.add or self.remove or "", self.parent, self.hash)
+        return (
+            type_order.index(self.type),
+            self.add or self.remove or "",
+            self.parent,
+            self.hash,
+        )
 
 
 def vary(primary, secondary, seed, fix_z=False, fix_h=False):
     rng = random.Random(seed)
     p = list(primary.z.mask) + [primary.z.ratio, primary.h.lr, primary.h.residual]
-    q = list(secondary.z.mask) + [secondary.z.ratio, secondary.h.lr, secondary.h.residual]
+    q = list(secondary.z.mask) + [
+        secondary.z.ratio,
+        secondary.h.lr,
+        secondary.h.residual,
+    ]
     choices = [[0, 1]] * 6 + [[1 / 16, 1 / 8], [1e-4, 3e-4, 1e-3], [1e-4, 1e-3]]
     genes = [rng.choice((a, b)) for a, b in zip(p, q)]
     mutable = list(range(7) if not fix_z else []) + ([7, 8] if not fix_h else [])
@@ -75,9 +85,13 @@ def construct(parent, proposal, cache):
     if proposal.kind == "import":
         if proposal.imported is None:
             raise ValueError("Missing complete checkpoint")
-        return proposal.imported  # immutable, exact: no lineage rewriting
+        return proposal.imported
     if proposal.kind == "fresh":
-        if proposal.z is None or proposal.h is None or sum(proposal.z.mask) not in (1, 2):
+        if (
+            proposal.z is None
+            or proposal.h is None
+            or sum(proposal.z.mask) not in (1, 2)
+        ):
             raise ValueError("Fresh must replay legal recorded genes")
         return replace(parent, z=proposal.z, h=proposal.h, phi=())
     if proposal.kind == "refine":
@@ -94,7 +108,11 @@ def construct(parent, proposal, cache):
     if proposal.add:
         if proposal.add in members:
             raise ValueError("Added member already selected")
-        if proposal.remove and cache.get(proposal.add).interface.port != cache.get(proposal.remove).interface.port:
+        if (
+            proposal.remove
+            and cache.get(proposal.add).interface.port
+            != cache.get(proposal.remove).interface.port
+        ):
             raise ValueError("Replace must use same port")
         members.add(proposal.add)
     if proposal.kind == "add" and (not proposal.add or proposal.remove):
@@ -107,4 +125,8 @@ def construct(parent, proposal, cache):
         if sum(cache.get(k).interface.port == port for k in members) > 2:
             raise ValueError("Two external paths per port")
     logits = dict(parent.beta)
-    return replace(parent, C=tuple(sorted(members)), beta=tuple((k, logits.get(k, 0.0)) for k in sorted(members)))
+    return replace(
+        parent,
+        C=tuple(sorted(members)),
+        beta=tuple((k, logits.get(k, 0.0)) for k in sorted(members)),
+    )

@@ -1,9 +1,7 @@
 {
-  "_status": "BIND_REQUIRED: executable bridge only; no external algorithm or detector qualification is fabricated.",
   "method": "DPFL",
   "formal": true,
-  "source_root": "BIND_ACTUAL_UPSTREAM_OR_PORT_CHECKOUT",
-  "repository_url": "https://github.com/salmakh1/DPFL",
+  "repository_url": "data/DPFL",
   "qualification": "BIND_DETECTOR_QUALIFICATION_REPORT.json",
   "runner": {
     "argv": [

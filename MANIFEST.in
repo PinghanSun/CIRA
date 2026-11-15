@@ -1,0 +1,4 @@
+include README.md THIRD_PARTY_NOTICES.md
+recursive-include configs *.json
+recursive-exclude configs *.private.json
+global-exclude *.py[cod]

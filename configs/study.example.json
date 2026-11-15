@@ -1,5 +1,4 @@
 {
-  "_status": "PLAN_ONLY_NOT_RUN: Q0 and Serial 50/50 are unlocked examples. Bind actual DEV locks before formal registration/execution. This registry does not implement external adapters or materialize scene/contact/donor conditions.",
   "datasets": [
     "ControlledFog",
     "ACDC"

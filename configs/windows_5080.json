@@ -1,7 +1,6 @@
 {
   "extends": "fixture.json",
   "purpose": "DEVELOPMENT",
-  "_status": "UNRUN hardware profile. Inherited search/fitting values are functional examples, not confirmed paper settings.",
   "confirmed": {},
   "runtime": {
     "device": "cuda:0",

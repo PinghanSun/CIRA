@@ -1,5 +1,4 @@
 {
-  "_status": "REFERENCE_ONLY: confirmed user hardware family; software build, bases, registries and measured profiles remain unbound.",
   "device_id": "jetson-orin-nano-8gb",
   "jetpack_expected": null,
   "sku_expected": "Jetson Orin Nano 8GB",

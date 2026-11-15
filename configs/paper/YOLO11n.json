@@ -1,0 +1,23 @@
+{
+  "ports": [
+    4,
+    6,
+    10,
+    16,
+    19,
+    22
+  ],
+  "labels": [
+    "person",
+    "rider",
+    "car",
+    "truck",
+    "bus",
+    "train",
+    "motorcycle",
+    "bicycle"
+  ],
+  "image_size": 640,
+  "preprocessing": "rgb_letterbox114_bilinear_float32_div255",
+  "cached_packages": []
+}

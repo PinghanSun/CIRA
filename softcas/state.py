@@ -1,4 +1,5 @@
 """Immutable, content-addressed X=(z,h,C,phi,beta,nu) and packages."""
+
 from __future__ import annotations
 import base64
 import hashlib
@@ -10,7 +11,9 @@ import torch
 
 
 def canonical(value) -> bytes:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    return json.dumps(
+        value, sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode()
 
 
 def digest(value) -> str:
@@ -26,10 +29,16 @@ class TensorBlob:
     @classmethod
     def take(cls, tensor):
         array = tensor.detach().cpu().contiguous().numpy()
-        return cls(array.dtype.str, tuple(array.shape), base64.b64encode(array.tobytes()).decode())
+        return cls(
+            array.dtype.str,
+            tuple(array.shape),
+            base64.b64encode(array.tobytes()).decode(),
+        )
 
     def tensor(self):
-        a = np.frombuffer(base64.b64decode(self.data), dtype=np.dtype(self.dtype)).copy()
+        a = np.frombuffer(
+            base64.b64decode(self.data), dtype=np.dtype(self.dtype)
+        ).copy()
         return torch.from_numpy(a.reshape(self.shape))
 
 
@@ -101,7 +110,10 @@ class Package:
         d = json.loads(wire)
         d["interface"]["labels"] = tuple(d["interface"]["labels"])
         d["interface"] = PortSpec(**d["interface"])
-        d["tensors"] = tuple((k, TensorBlob(v["dtype"], tuple(v["shape"]), v["data"])) for k, v in d["tensors"])
+        d["tensors"] = tuple(
+            (k, TensorBlob(v["dtype"], tuple(v["shape"]), v["data"]))
+            for k, v in d["tensors"]
+        )
         return cls(**d)
 
 
@@ -115,7 +127,10 @@ class State:
     nu: str
 
     def __post_init__(self):
-        if self.C != tuple(sorted(set(self.C))) or tuple(k for k, _ in self.beta) != self.C:
+        if (
+            self.C != tuple(sorted(set(self.C)))
+            or tuple(k for k, _ in self.beta) != self.C
+        ):
             raise ValueError("Membership must be sorted, unique, and equal logit keys")
         canonical(dict(self.beta))
         json.loads(self.nu)
@@ -125,12 +140,18 @@ class State:
         return digest(asdict(self))
 
     def model_hash(self, base_identity: str):
-        # h and history distinguish checkpoints, but do not change the forward map.
         execution = json.loads(self.nu)
-        return digest({"base": base_identity, "z": asdict(self.z), "C": self.C,
-                       "receiving_rule": execution.get("receiving_rule", "soft"),
-                       "discrete_choices": execution.get("discrete_choices", {}),
-                       "phi": [(k, asdict(v)) for k, v in self.phi], "beta": self.beta})
+        return digest(
+            {
+                "base": base_identity,
+                "z": asdict(self.z),
+                "C": self.C,
+                "receiving_rule": execution.get("receiving_rule", "soft"),
+                "discrete_choices": execution.get("discrete_choices", {}),
+                "phi": [(k, asdict(v)) for k, v in self.phi],
+                "beta": self.beta,
+            }
+        )
 
     def lineage(self, **changes):
         d = json.loads(self.nu)
@@ -138,9 +159,8 @@ class State:
         return replace(self, nu=canonical(d).decode())
 
     def save(self, path):
-        # Use the same atomic replacement as the persistent content store.
-        # A failed write must leave an already deployed checkpoint readable.
         from .storage import atomic_write
+
         atomic_write(path, canonical({"hash": self.hash, "state": asdict(self)}))
 
     @classmethod
@@ -156,7 +176,10 @@ class State:
         d["h"] = FitSettings(**d["h"])
         d["C"] = tuple(d["C"])
         d["beta"] = tuple((k, v) for k, v in d["beta"])
-        d["phi"] = tuple((k, TensorBlob(v["dtype"], tuple(v["shape"]), v["data"])) for k, v in d["phi"])
+        d["phi"] = tuple(
+            (k, TensorBlob(v["dtype"], tuple(v["shape"]), v["data"]))
+            for k, v in d["phi"]
+        )
         state = cls(**d)
         if state.hash != wrapper["hash"]:
             raise ValueError("Checkpoint checksum mismatch")

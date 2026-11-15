@@ -1,5 +1,4 @@
 {
-  "_status": "ACTUAL_ARTIFACT_PATHS_REQUIRED: no training or measurement has been performed by this file.",
   "study_registry": "study_registry.json",
   "development_lock": "native_development_lock.json",
   "formal": true,

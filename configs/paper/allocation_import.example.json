@@ -1,0 +1,11 @@
+{
+  "allocations": [],
+  "catalogs": [],
+  "annotations": [],
+  "output_directory": null,
+  "seed": 1001,
+  "known_identities_checked": false,
+  "exposure_policy": "single_exposure",
+  "augment_acdc": true,
+  "phase": "formal"
+}

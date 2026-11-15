@@ -1,5 +1,4 @@
 {
-  "_status": "BIND_REQUIRED_NOT_RUN: provide real peer endpoints and explicit start epochs, SOURCE-prepared checkpoints, per-seed registries, cost/feature calibration, and development-selected settings. The eight external methods have no native adapters in this matrix.",
   "formal": false,
   "algorithm_config": "configs/native_r1000.json",
   "primary_detector": "YOLOv8n",

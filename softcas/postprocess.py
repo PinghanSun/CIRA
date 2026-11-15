@@ -1,4 +1,5 @@
 """Fixed, deterministic detector postprocessing without time-truncated NMS."""
+
 from __future__ import annotations
 import torch
 
@@ -24,7 +25,15 @@ def fixed_nms(boxes, scores, classes, iou_threshold, maximum):
     return torch.stack(kept).long()
 
 
-def decode(predictions, classes, end2end=False, confidence=0.001, iou=0.7, maximum=300, maximum_candidates=30000):
+def decode(
+    predictions,
+    classes,
+    end2end=False,
+    confidence=0.001,
+    iou=0.7,
+    maximum=300,
+    maximum_candidates=30000,
+):
     raw = predictions[0] if isinstance(predictions, (tuple, list)) else predictions
     if end2end or raw.shape[-1] == 6:
         outputs = []
@@ -42,7 +51,19 @@ def decode(predictions, classes, end2end=False, confidence=0.001, iou=0.7, maxim
         values, scores, labels = values[keep], scores[keep], labels[keep]
         order = torch.argsort(scores, descending=True, stable=True)[:maximum_candidates]
         values, scores, labels = values[order], scores[order], labels[order]
-        boxes = torch.cat((values[:, :2] - values[:, 2:4] / 2, values[:, :2] + values[:, 2:4] / 2), dim=1)
+        boxes = torch.cat(
+            (values[:, :2] - values[:, 2:4] / 2, values[:, :2] + values[:, 2:4] / 2),
+            dim=1,
+        )
         selected = fixed_nms(boxes, scores, labels, iou, maximum)
-        outputs.append(torch.cat((boxes[selected], scores[selected, None], labels[selected, None].float()), dim=1))
+        outputs.append(
+            torch.cat(
+                (
+                    boxes[selected],
+                    scores[selected, None],
+                    labels[selected, None].float(),
+                ),
+                dim=1,
+            )
+        )
     return outputs

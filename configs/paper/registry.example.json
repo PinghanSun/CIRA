@@ -1,0 +1,25 @@
+{
+  "source_records": null,
+  "output": null,
+  "seed": 1001,
+  "clients": 4,
+  "domains": [
+    "fog",
+    "night",
+    "rain",
+    "snow"
+  ],
+  "role_fractions": {
+    "D": 0.76,
+    "V": 0.12,
+    "A": 0.12
+  },
+  "alpha": 1.0,
+  "grouping_basis": "known_identity",
+  "exposure_policy": "single_exposure",
+  "augment_acdc": true,
+  "formal": false,
+  "preserve_allocation": true,
+  "require_full_support": true,
+  "phase": "formal"
+}

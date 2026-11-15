@@ -1,0 +1,387 @@
+{
+  "schema": "cira.paper_protocol.20261113",
+  "revision": "20261114",
+  "labels": [
+    "person",
+    "rider",
+    "car",
+    "truck",
+    "bus",
+    "train",
+    "motorcycle",
+    "bicycle"
+  ],
+  "clients": 4,
+  "stages": 4,
+  "seeds": [
+    1001,
+    1002,
+    1003,
+    1004,
+    1005
+  ],
+  "dev_seeds": [
+    9001,
+    9002,
+    9003
+  ],
+  "detectors": {
+    "YOLOv8n": {
+      "modules": [
+        4,
+        6,
+        9,
+        15,
+        18,
+        21
+      ],
+      "channels": [
+        64,
+        128,
+        256,
+        64,
+        128,
+        256
+      ]
+    },
+    "YOLO11n": {
+      "modules": [
+        4,
+        6,
+        10,
+        16,
+        19,
+        22
+      ],
+      "channels": [
+        128,
+        128,
+        256,
+        64,
+        128,
+        256
+      ]
+    },
+    "YOLO26n": {
+      "modules": [
+        4,
+        6,
+        10,
+        16,
+        19,
+        22
+      ],
+      "channels": [
+        128,
+        128,
+        256,
+        64,
+        128,
+        256
+      ]
+    }
+  },
+  "methods": [
+    "local",
+    "local_nas_hpo",
+    "fixed_collaboration",
+    "serial",
+    "round_robin",
+    "softcas",
+    "DPFL",
+    "pFedDIL",
+    "DA-DPFL",
+    "DeModCL",
+    "DCFCL",
+    "dFLMoE",
+    "PerFedSDE-NAS",
+    "DSpodFL"
+  ],
+  "datasets": {
+    "ACDC": {
+      "domains": [
+        "fog",
+        "night",
+        "rain",
+        "snow"
+      ],
+      "online_rgb": 1600,
+      "roles": {
+        "D": 1216,
+        "V": 192,
+        "A": 192
+      },
+      "reporting_rgb": 406,
+      "per_client_stage": {
+        "D": 76,
+        "V": 12,
+        "A": 12
+      },
+      "known_D_groups": 1208,
+      "allocation_D_groups": 1206,
+      "exposure": "single_exposure"
+    },
+    "ControlledFog": {
+      "domains": [
+        "clear",
+        "fog_005",
+        "fog_010",
+        "fog_020"
+      ],
+      "online_bases": 2375,
+      "online_rgb": 9500,
+      "roles": {
+        "D": 7036,
+        "V": 1232,
+        "A": 1232
+      },
+      "reporting_bases": 500,
+      "reporting_rgb": 2000,
+      "exposure": "repeated_content"
+    },
+    "BDD100K": {
+      "train_rgb": 70000,
+      "validation_rgb": 10000,
+      "test_rgb": 20000,
+      "role_targets": {
+        "D": 56000,
+        "V": 7000,
+        "A": 7000
+      },
+      "role_fractions": {
+        "D": 0.8,
+        "V": 0.1,
+        "A": 0.1
+      },
+      "domain_priority": [
+        "night",
+        "adverse",
+        "overcast",
+        "clear"
+      ],
+      "unknown_attributes": "reserve",
+      "exposure": "single_exposure"
+    }
+  },
+  "partition": {
+    "alpha": 1.0,
+    "clients": 4,
+    "whole_allocation_groups": true,
+    "grouping_basis": "known_identity",
+    "role_and_client_shared_across_appearances": true,
+    "scene_independence_verified": false,
+    "dev_return": "D_only_after_lock_and_reset"
+  },
+  "initialization": {
+    "source_bases": 600,
+    "fit_bases": 540,
+    "clear_validation_rgb": 60,
+    "fog_validation_rgb": 180,
+    "C0": {
+      "labeled_rgb": 540,
+      "unlabeled_rgb": 0
+    },
+    "C1": {
+      "labeled_rgb": 2160,
+      "unlabeled_rgb": 0
+    },
+    "C2": {
+      "labeled_rgb": 2160,
+      "unlabeled_rgb": 19997
+    },
+    "teacher_momentum": null,
+    "pseudo_confidence": null,
+    "unlabeled_weight": null,
+    "updates": null,
+    "lr": null,
+    "batch_size": null,
+    "checkpoint_selection": "SOURCE_clear_validation"
+  },
+  "augmentation": {
+    "D_only": true,
+    "ACDC_views": [
+      "original",
+      "hflip",
+      "rotate_minus5",
+      "rotate_plus5"
+    ],
+    "views_per_original_per_epoch": 1,
+    "originals": 1216,
+    "view_recipes": 4864,
+    "V_A_T": "deterministic",
+    "shared_local_peer_image": true
+  },
+  "development": {
+    "stage_epoch_candidates": [
+      50,
+      100,
+      200
+    ],
+    "attempt_candidates": [
+      8,
+      16,
+      32
+    ],
+    "provisional_stage_epochs": 100,
+    "provisional_attempts": 16,
+    "locked": false
+  },
+  "search": {
+    "local_ports": 6,
+    "active_local_ports": [
+      1,
+      2
+    ],
+    "ratios": [
+      0.0625,
+      0.125
+    ],
+    "local_lrs": [
+      0.0001,
+      0.0003,
+      0.001
+    ],
+    "residual_penalties": [
+      0.0001,
+      0.001
+    ],
+    "structures": 42,
+    "local_choices": 252,
+    "features": 25,
+    "proposals_per_type": 3,
+    "archive_capacity": 8,
+    "retained_checkpoints": 8,
+    "external_paths_per_port": 2,
+    "external_paths_total": 12,
+    "local_block_epochs": 8,
+    "logit_block_epochs": 4,
+    "lambda": 1.0,
+    "kappa": 0.01,
+    "beta_lr": 0.01,
+    "audit_margin": 0.0,
+    "native_feature_scales": null,
+    "native_F_ceiling": null,
+    "native_W_ceiling": null
+  },
+  "runtime": {
+    "ultralytics": "8.4.0",
+    "image_size": 640,
+    "fit_batch": 8,
+    "eval_batch": 1,
+    "precision": "float32",
+    "optimizer": "AdamW",
+    "betas": [
+      0.9,
+      0.999
+    ],
+    "epsilon": 1e-08,
+    "frozen_base": true,
+    "frozen_peer_parameters": true,
+    "input_gradients": true,
+    "null_logit": 0.0,
+    "reset_optimizer_per_block": true
+  },
+  "resources": {
+    "communication_bytes": 33554432,
+    "cache_bytes": 134217728,
+    "checkpoint_bytes": 536870912,
+    "transient_bytes": 268435456,
+    "deployed_bytes": 134217728,
+    "RAM_bytes": 2147483648,
+    "CUDA_bytes": 2147483648,
+    "p95_ms": 100
+  },
+  "device": {
+    "online_nodes": 4,
+    "online_model": "Jetson Orin Nano 8GB",
+    "preparation_workstation": "RTX 5080",
+    "warmup": 50,
+    "timed_requests": 200,
+    "sessions_per_checkpoint_node": 3,
+    "measurement_values": null
+  },
+  "statistics": {
+    "unit": "complete_federation_trajectory",
+    "paired": true,
+    "confidence": 0.95,
+    "sd_ddof": 1,
+    "primary_holm_family": 12,
+    "mechanism_holm_family": 36,
+    "U_holm_family": 10,
+    "BDD_holm_family": 4,
+    "unsupported_class": "null",
+    "AP_internal": "fraction",
+    "AP_report": "percent",
+    "AP_difference": "percentage_points"
+  },
+  "diagnostics": {
+    "E3": {
+      "operation": "configuration_x_composition",
+      "native_fixed_peer_mass": true,
+      "separate_linear_diagnostic_fixed_D_RMS": true,
+      "cells": 4
+    },
+    "E4": {
+      "operation": "D_only_logit_fit",
+      "controls": [
+        "frozen_parent_logits",
+        "uniform"
+      ]
+    },
+    "E5": {
+      "operation": "inherited_state",
+      "controls": [
+        "reset_local",
+        "reset_both",
+        "reset_logits"
+      ]
+    },
+    "prediction_references": [
+      "predictor",
+      "zero",
+      "past_feedback_mean"
+    ],
+    "noise_sigma": [
+      0,
+      0.01,
+      0.03
+    ],
+    "F_multipliers": [
+      0.5,
+      1,
+      2
+    ],
+    "round_budgets": [
+      300,
+      500,
+      1000
+    ],
+    "alpha": [
+      0.1,
+      0.3,
+      0.5,
+      0.7,
+      1.0
+    ],
+    "equal_target": true,
+    "native_alpha_values_must_be_executed": true,
+    "peer_perturbations": [
+      "half_visibility",
+      "half_payload",
+      "empty_donor",
+      "weak_donor"
+    ]
+  },
+  "legacy_numerical": {
+    "reference": "R1000",
+    "main_controller": "Q2",
+    "lambda": 10.0,
+    "native_local_block_epochs": 32,
+    "native_logit_block_epochs": 16,
+    "feature_model_is_separate": true,
+    "existing_interpolated_alpha": [
+      0.5,
+      0.7
+    ]
+  }
+}

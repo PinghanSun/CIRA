@@ -14,7 +14,14 @@ from softcas.backend import Backend
 from softcas.cache import PackageCache, ContactExchange
 from softcas.cli import ROOT
 from softcas.config import load_config
-from softcas.controller import Archive, Scored, Ridge, FeatureEncoder, Selector, priority
+from softcas.controller import (
+    Archive,
+    Scored,
+    Ridge,
+    FeatureEncoder,
+    Selector,
+    priority,
+)
 from softcas.data import StageData, synthetic_split, validate_registry
 from softcas.engine import Executor, initial_state, run_stage
 from softcas.evaluation import EvaluationCache, detection_ap
@@ -24,7 +31,14 @@ from softcas.reporting import retention, paired_effects, macro_endpoints
 from softcas.partition import shared_targets, assign_groups, balance_objective
 from softcas.tables import export_tables
 from softcas.resources import Cost, Ledger, ExecutionStopped, TransferJournal
-from softcas.state import State, Structure, FitSettings, Package, freeze_tensors, canonical
+from softcas.state import (
+    State,
+    Structure,
+    FitSettings,
+    Package,
+    freeze_tensors,
+    canonical,
+)
 
 torch.set_num_threads(1)
 
@@ -34,28 +48,51 @@ class Fixture(unittest.TestCase):
         self.c = load_config(ROOT / "configs" / "fixture.json")
         self.backend = Backend()
         self.cache = PackageCache(1000000, self.backend.specs)
-        self.state = initial_state(self.backend, self.cache, Structure((1, 0, 0, 0, 0, 0), 1 / 8), FitSettings(1e-3, 1e-3), 42)
-        self.data = StageData(*(synthetic_split(r, "0", 1, "a", 10 + i) for i, r in enumerate(("D", "V", "A"))))
+        self.state = initial_state(
+            self.backend,
+            self.cache,
+            Structure((1, 0, 0, 0, 0, 0), 1 / 8),
+            FitSettings(1e-3, 1e-3),
+            42,
+        )
+        self.data = StageData(
+            *(
+                synthetic_split(r, "0", 1, "a", 10 + i)
+                for i, r in enumerate(("D", "V", "A"))
+            )
+        )
         self.ledger = Ledger(Cost(1e12, 100, 1e7, 1000), Cost(1e12, 0, 1e7, 100))
         self.source = Ledger(Cost(1e12, 100, 1e7, 1000), Cost())
         self.exchange = ContactExchange("0", self.cache, self.ledger)
         self.evaluator = EvaluationCache()
-        self.executor = Executor(self.backend, self.exchange, self.evaluator, self.c, self.ledger)
+        self.executor = Executor(
+            self.backend, self.exchange, self.evaluator, self.c, self.ledger
+        )
 
     def package(self, port=0, seed=9, owner="peer"):
         with torch.random.fork_rng():
             torch.manual_seed(seed)
             adapter = Adapter(8, 1 / 8)
             torch.nn.init.normal_(adapter.up.weight, 0, 0.2)
-        return Package(owner, str(seed), 1, 2, self.backend.specs[port], 1 / 8,
-                       freeze_tensors(adapter.state_dict()), "fixture independent donor")
+        return Package(
+            owner,
+            str(seed),
+            1,
+            2,
+            self.backend.specs[port],
+            1 / 8,
+            freeze_tensors(adapter.state_dict()),
+            "fixture independent donor",
+        )
 
     def put(self, package):
         self.cache.put(package.hash, package.wire)
         return package.hash
 
     def proposal(self, kind, parent=None, **kwargs):
-        return Proposal((parent or self.state).hash, kind, 19, Cost(1e6, 1, 0, 1), **kwargs)
+        return Proposal(
+            (parent or self.state).hash, kind, 19, Cost(1e6, 1, 0, 1), **kwargs
+        )
 
 
 class StateAndModelTests(Fixture):
@@ -78,7 +115,9 @@ class StateAndModelTests(Fixture):
         adapter = Adapter(8, 1 / 16)
         self.assertEqual(float(adapter.gate.sigmoid()), 0.5)
         self.assertEqual(adapter.down.out_channels, 1)
-        self.assertTrue(torch.equal(adapter(torch.randn(2, 8, 3, 3)), torch.zeros(2, 8, 3, 3)))
+        self.assertTrue(
+            torch.equal(adapter(torch.randn(2, 8, 3, 3)), torch.zeros(2, 8, 3, 3))
+        )
         self.assertEqual(len(self.backend.specs), 6)
 
     def test_parallel_same_input_and_null_normalization(self):
@@ -103,8 +142,16 @@ class StateAndModelTests(Fixture):
         self.backend.loss(model, self.data.D.batches[0]).backward()
         self.assertGreater(float(model.ports["0"].local.up.weight.grad.abs().sum()), 0)
         self.assertTrue(all(p.grad is None for p in model.base.parameters()))
-        self.assertTrue(all(p.grad is None for port in model.ports.values() for p in port.external.parameters()))
-        self.assertTrue(all(torch.equal(v, frozen[k]) for k, v in model.base.state_dict().items()))
+        self.assertTrue(
+            all(
+                p.grad is None
+                for port in model.ports.values()
+                for p in port.external.parameters()
+            )
+        )
+        self.assertTrue(
+            all(torch.equal(v, frozen[k]) for k, v in model.base.state_dict().items())
+        )
 
     def test_penalty_normalizes_per_image_then_averages(self):
         p = self.package()
@@ -115,7 +162,9 @@ class StateAndModelTests(Fixture):
         x[1] *= 20
         residual = local(x)
         port(x)
-        expected = (residual.square().sum((1, 2, 3)) / (x.square().sum((1, 2, 3)) + 1e-8)).mean()
+        expected = (
+            residual.square().sum((1, 2, 3)) / (x.square().sum((1, 2, 3)) + 1e-8)
+        ).mean()
         self.assertTrue(torch.allclose(port.last_penalty, expected))
 
     def test_fresh_reinitializes_all_phi_and_keeps_composition(self):
@@ -149,26 +198,46 @@ class StateAndModelTests(Fixture):
         self.assertEqual(dict(child.beta)[k1], 1.2)
         self.assertEqual(dict(child.beta)[k2], 0)
         model = self.backend.assembly(child, self.cache, mode="collaboration")
-        self.assertTrue(all(not p.requires_grad for p in model.ports["0"].local.parameters()))
-        self.assertTrue(all(p.requires_grad for p in model.ports["0"].beta.parameters()))
-        replacement = construct(parent, self.proposal("replace", parent, add=k2, remove=k1), self.cache)
+        self.assertTrue(
+            all(not p.requires_grad for p in model.ports["0"].local.parameters())
+        )
+        self.assertTrue(
+            all(p.requires_grad for p in model.ports["0"].beta.parameters())
+        )
+        replacement = construct(
+            parent, self.proposal("replace", parent, add=k2, remove=k1), self.cache
+        )
         self.assertEqual(replacement.C, (k2,))
-        removed = construct(parent, self.proposal("remove", parent, remove=k1), self.cache)
+        removed = construct(
+            parent, self.proposal("remove", parent, remove=k1), self.cache
+        )
         self.assertFalse(removed.beta)
-        self.assertIsNone(self.backend.assembly(removed, self.cache, mode="collaboration").optimizer(1e-3, 1e-3))
+        self.assertIsNone(
+            self.backend.assembly(removed, self.cache, mode="collaboration").optimizer(
+                1e-3, 1e-3
+            )
+        )
         wrong = self.put(self.package(port=1, seed=3))
         with self.assertRaises(ValueError):
-            construct(parent, self.proposal("replace", parent, add=wrong, remove=k1), self.cache)
+            construct(
+                parent,
+                self.proposal("replace", parent, add=wrong, remove=k1),
+                self.cache,
+            )
 
     def test_external_two_path_cap(self):
         keys = sorted(self.put(self.package(seed=i)) for i in range(3))
-        parent = replace(self.state, C=tuple(keys[:2]), beta=tuple((k, 0) for k in keys[:2]))
+        parent = replace(
+            self.state, C=tuple(keys[:2]), beta=tuple((k, 0) for k in keys[:2])
+        )
         with self.assertRaises(ValueError):
             construct(parent, self.proposal("add", parent, add=keys[2]), self.cache)
 
     def test_import_is_exact_no_fitting(self):
         saved = self.state.lineage(unique="exact complete history")
-        result = self.executor.run(self.proposal("import", imported=saved), self.state, self.data)
+        result = self.executor.run(
+            self.proposal("import", imported=saved), self.state, self.data
+        )
         self.assertEqual(result.status, "complete")
         self.assertEqual(result.state, saved)
         self.assertFalse(any(e["reason"] == "fit" for e in self.ledger.events))
@@ -188,29 +257,44 @@ class StateAndModelTests(Fixture):
 
     def test_discrete_receiving_is_one_hot_no_beta_fit(self):
         k = self.put(self.package())
-        state = replace(self.state, C=(k,), beta=((k, 9),)).lineage(receiving_rule="discrete", discrete_choices={"0": k})
+        state = replace(self.state, C=(k,), beta=((k, 9),)).lineage(
+            receiving_rule="discrete", discrete_choices={"0": k}
+        )
         model = self.backend.assembly(state, self.cache, mode="collaboration")
         port = model.ports["0"]
         x = torch.randn(1, 8, 4, 4)
-        self.assertTrue(torch.allclose(port(x), x + port.local(x) + port.external[k](x)))
+        self.assertTrue(
+            torch.allclose(port(x), x + port.local(x) + port.external[k](x))
+        )
         self.assertFalse(port.beta[k].requires_grad)
         self.assertIsNone(model.optimizer(1e-3, 1e-3))
         null = state.lineage(discrete_choices={"0": None})
-        self.assertNotEqual(state.model_hash(self.backend.identity), null.model_hash(self.backend.identity))
+        self.assertNotEqual(
+            state.model_hash(self.backend.identity),
+            null.model_hash(self.backend.identity),
+        )
         null_port = self.backend.assembly(null, self.cache).ports["0"]
         null_port(x)
         self.assertEqual(null_port.path_calls, 0)
 
     def test_frozen_local_penalty_retains_beta_gradient(self):
         key = self.put(self.package(port=0))
-        state = initial_state(self.backend, self.cache, Structure((0, 0, 1, 0, 0, 0), 1 / 8), self.state.h, 4)
+        state = initial_state(
+            self.backend,
+            self.cache,
+            Structure((0, 0, 1, 0, 0, 0), 1 / 8),
+            self.state.h,
+            4,
+        )
         state = replace(state, C=(key,), beta=((key, 0),))
         model = self.backend.assembly(state, self.cache, mode="collaboration")
         model.ports["2"].local.up.weight.data.fill_(0.3)
         model(self.data.D.batches[0]["img"])
         model.penalty().backward()
         self.assertGreater(float(model.ports["0"].beta[key].grad.abs()), 0)
-        self.assertTrue(all(p.grad is None for p in model.ports["2"].local.parameters()))
+        self.assertTrue(
+            all(p.grad is None for p in model.ports["2"].local.parameters())
+        )
 
 
 class CacheAndBudgetTests(Fixture):
@@ -221,22 +305,31 @@ class CacheAndBudgetTests(Fixture):
         with self.assertRaises(ExecutionStopped):
             self.exchange.acquire(p.hash, 3)
         self.assertNotIn(p.hash, self.cache)
-        request_bytes = sum(r["bytes"] for r in self.exchange.records if r["kind"] == "request")
+        request_bytes = sum(
+            r["bytes"] for r in self.exchange.records if r["kind"] == "request"
+        )
         self.assertEqual(self.ledger.used["search"].B - before, request_bytes + 10)
         self.exchange.observe("peer", {p.hash: p.wire}, 4, 100000, self.source)
         self.exchange.acquire(p.hash, 4)
         self.assertIn(p.hash, self.cache)
-        self.assertEqual(sum(r["bytes"] for r in self.exchange.records if r["kind"] == "payload"), 10 + len(p.wire))
+        self.assertEqual(
+            sum(r["bytes"] for r in self.exchange.records if r["kind"] == "payload"),
+            10 + len(p.wire),
+        )
         self.exchange.disconnect("peer")
         self.assertEqual(self.exchange.acquire(p.hash, 5), p)
-        self.assertEqual(self.exchange.journal.network_bytes, self.ledger.used["search"].B)
+        self.assertEqual(
+            self.exchange.journal.network_bytes, self.ledger.used["search"].B
+        )
 
     def test_future_unadvertised_incompatible_and_checksum_rejected(self):
         p = self.package()
         with self.assertRaises(ExecutionStopped):
             self.exchange.acquire(p.hash, 4)
         future = replace(p, available=20)
-        self.exchange.observe("peer", {future.hash: future.wire}, 3, 100000, self.source)
+        self.exchange.observe(
+            "peer", {future.hash: future.wire}, 3, 100000, self.source
+        )
         self.assertNotIn(future.hash, self.exchange.catalogue)
         with self.assertRaises(ValueError):
             self.cache.put("wrong", p.wire)
@@ -264,7 +357,9 @@ class CacheAndBudgetTests(Fixture):
         self.exchange.observe("peer", {p.hash: p.wire}, 3, 100000, self.source)
         a = replace(self.proposal("add", add=p.hash), acquisition=True)
         before = self.state.hash
-        with patch.object(self.backend, "loss", side_effect=RuntimeError("injected fitting failure")):
+        with patch.object(
+            self.backend, "loss", side_effect=RuntimeError("injected fitting failure")
+        ):
             result = self.executor.run(a, self.state, self.data)
         self.assertEqual(result.status, "failed")
         self.assertEqual(result.state, self.state)
@@ -300,8 +395,15 @@ class CacheAndBudgetTests(Fixture):
         journal.add("id", "a", "b", 10, "payload", 1)
         journal.add("id", "a", "b", 10, "payload", 1)
         self.assertEqual(journal.network_bytes, 10)
-        requests = [{"time": 1, "requester": "b"}, {"time": 0, "requester": "z"}, {"time": 1, "requester": "a"}]
-        self.assertEqual([r["requester"] for r in ContactExchange.order_requests(requests)], ["z", "a", "b"])
+        requests = [
+            {"time": 1, "requester": "b"},
+            {"time": 0, "requester": "z"},
+            {"time": 1, "requester": "a"},
+        ]
+        self.assertEqual(
+            [r["requester"] for r in ContactExchange.order_requests(requests)],
+            ["z", "a", "b"],
+        )
 
 
 class ControllerAndStageTests(Fixture):
@@ -331,39 +433,90 @@ class ControllerAndStageTests(Fixture):
         archive.insert(Scored(self.state.lineage(id=2), 0.6, 0.1, "collaboration"))
         self.assertEqual(set(archive.items), {self.state.hash, best.hash})
         r1, r2 = random.Random(2), random.Random(2)
-        self.assertEqual([archive.parent(r1).state.hash for _ in range(10)], [archive.parent(r2).state.hash for _ in range(10)])
+        self.assertEqual(
+            [archive.parent(r1).state.hash for _ in range(10)],
+            [archive.parent(r2).state.hash for _ in range(10)],
+        )
 
     def test_reimport_incumbent_preserves_both_family_parent_eligibility(self):
         archive = Archive(self.state, 0.5, 2, self.cache)
         archive.insert(Scored(self.state, 0.5, 0, "configuration"))
-        self.assertEqual(archive.parent(random.Random(1), "collaboration").state, self.state)
+        self.assertEqual(
+            archive.parent(random.Random(1), "collaboration").state, self.state
+        )
 
     def test_failed_attempt_slot_target_and_preexecution_features(self):
         self.c["attempts"] = 2
         captured = []
+
         def provider(archive, attempt):
             p = self.proposal("refine")
             captured.append(p)
             return [p]
-        self.evaluator.evaluate(self.backend, self.state, self.cache, self.data.V, self.ledger)
+
+        self.evaluator.evaluate(
+            self.backend, self.state, self.cache, self.data.V, self.ledger
+        )
         with patch.object(self.backend, "loss", side_effect=RuntimeError("injected")):
-            result = run_stage(self.backend, self.state, self.data, self.cache, self.exchange, self.ledger,
-                               self.c, proposal_provider=provider, evaluator=self.evaluator)
+            result = run_stage(
+                self.backend,
+                self.state,
+                self.data,
+                self.cache,
+                self.exchange,
+                self.ledger,
+                self.c,
+                proposal_provider=provider,
+                evaluator=self.evaluator,
+            )
         self.assertEqual(len(result.actions), 2)
         self.assertEqual(result.predictor.n, 2)
-        self.assertTrue(all(r["gain"] == 0 and r["status"] == "failed" and r["child"] == self.state.hash for r in result.actions))
-        self.assertTrue(all(r["predictor_n_before"] + 1 == r["predictor_n_after"] for r in result.actions))
-        self.assertEqual(result.actions[0]["features"][self.c["features"]["fields"].index("parent_utility")], 0)
+        self.assertTrue(
+            all(
+                r["gain"] == 0
+                and r["status"] == "failed"
+                and r["child"] == self.state.hash
+                for r in result.actions
+            )
+        )
+        self.assertTrue(
+            all(
+                r["predictor_n_before"] + 1 == r["predictor_n_after"]
+                for r in result.actions
+            )
+        )
+        self.assertEqual(
+            result.actions[0]["features"][
+                self.c["features"]["fields"].index("parent_utility")
+            ],
+            0,
+        )
 
     def test_audit_failure_locks_one_and_keeps_incumbent(self):
         self.c["attempts"] = 2
         counters = {"V": 0, "A": 0}
+
         def score(model, split):
             counters[split.role] += 1
-            return (0.4 + 0.1 * counters["V"]) if split.role == "V" else (0.1 if counters["A"] == 1 else 0.9)
+            return (
+                (0.4 + 0.1 * counters["V"])
+                if split.role == "V"
+                else (0.1 if counters["A"] == 1 else 0.9)
+            )
+
         with patch.object(self.backend, "score", side_effect=score):
-            result = run_stage(self.backend, self.state, self.data, self.cache, self.exchange, self.ledger,
-                               self.c, proposal_provider=lambda archive, n: [self.proposal("refine", archive.champion.state)])
+            result = run_stage(
+                self.backend,
+                self.state,
+                self.data,
+                self.cache,
+                self.exchange,
+                self.ledger,
+                self.c,
+                proposal_provider=lambda archive, n: [
+                    self.proposal("refine", archive.champion.state)
+                ],
+            )
         self.assertNotEqual(result.champion.hash, self.state.hash)
         self.assertEqual(result.deployed, self.state)
         self.assertEqual(counters["A"], 2)
@@ -377,12 +530,26 @@ class ControllerAndStageTests(Fixture):
         key = self.put(self.package())
         self.c["attempts"] = 1
         calls = {"V": 0, "A": 0}
+
         def score(model, split):
             calls[split.role] += 1
-            return (0.4 if calls["V"] == 1 else 0.8) if split.role == "V" else (0.8 if calls["A"] == 1 else 0.4)
+            return (
+                (0.4 if calls["V"] == 1 else 0.8)
+                if split.role == "V"
+                else (0.8 if calls["A"] == 1 else 0.4)
+            )
+
         with patch.object(self.backend, "score", side_effect=score):
-            result = run_stage(self.backend, self.state, self.data, self.cache, self.exchange, self.ledger,
-                               self.c, proposal_provider=lambda archive, n: [self.proposal("add", add=key)])
+            result = run_stage(
+                self.backend,
+                self.state,
+                self.data,
+                self.cache,
+                self.exchange,
+                self.ledger,
+                self.c,
+                proposal_provider=lambda archive, n: [self.proposal("add", add=key)],
+            )
         self.assertTrue(result.audit["released"])
         self.assertEqual(result.deployed.C, (key,))
         self.assertEqual(result.deployed.phi, self.state.phi)
@@ -399,9 +566,13 @@ class ControllerAndStageTests(Fixture):
         for selector in (no_gain, rr):
             selector.observed = set(TYPES)
             selector.local_fresh_offered = True
-        decision, reason = no_gain.choose([a], archive, ridge, encoder, self.ledger.remaining(), self.cache, {})
+        decision, reason = no_gain.choose(
+            [a], archive, ridge, encoder, self.ledger.remaining(), self.cache, {}
+        )
         self.assertIsNone(decision)
-        decision, reason = rr.choose([a], archive, ridge, encoder, self.ledger.remaining(), self.cache, {})
+        decision, reason = rr.choose(
+            [a], archive, ridge, encoder, self.ledger.remaining(), self.cache, {}
+        )
         self.assertEqual(reason, "round_robin")
         self.assertIsNotNone(decision)
 
@@ -411,7 +582,15 @@ class ControllerAndStageTests(Fixture):
         ridge = Ridge(len(encoder.fields), 1)
         selector = Selector(TYPES, TYPES, 0.1, 0.001)
         a = self.proposal("fresh", z=self.state.z, h=self.state.h)
-        decision, reason = selector.choose([a, self.proposal("refine")], archive, ridge, encoder, self.ledger.remaining(), self.cache, {})
+        decision, reason = selector.choose(
+            [a, self.proposal("refine")],
+            archive,
+            ridge,
+            encoder,
+            self.ledger.remaining(),
+            self.cache,
+            {},
+        )
         self.assertEqual(reason, "cold_local_fresh")
         self.assertEqual(decision[0].kind, "fresh")
 
@@ -424,9 +603,16 @@ class ControllerAndStageTests(Fixture):
         self.c["ablation"] = "no_handoff"
         factory = ProposalFactory(self.c, self.backend, self.exchange)
         for _ in range(20):
-            self.assertNotEqual(factory._parent(archive, "configuration").state.hash, collab_state.hash)
+            self.assertNotEqual(
+                factory._parent(archive, "configuration").state.hash, collab_state.hash
+            )
         proposals = factory.generate(archive, self.ledger)
-        self.assertTrue(all(sum(a.type == t for a in proposals) <= self.c["proposals_per_type"] for t in TYPES))
+        self.assertTrue(
+            all(
+                sum(a.type == t for a in proposals) <= self.c["proposals_per_type"]
+                for t in TYPES
+            )
+        )
 
     def test_formal_config_rejects_test_choices(self):
         with self.assertRaises(ValueError):
@@ -435,49 +621,81 @@ class ControllerAndStageTests(Fixture):
 
 class EvaluationAndReportingTests(Fixture):
     def test_exact_reuse_identity_h_history_and_data(self):
-        score, reused = self.evaluator.evaluate(self.backend, self.state, self.cache, self.data.V, self.ledger)
+        score, reused = self.evaluator.evaluate(
+            self.backend, self.state, self.cache, self.data.V, self.ledger
+        )
         history = self.state.lineage(history="different")
-        _, reused = self.evaluator.evaluate(self.backend, history, self.cache, self.data.V, self.ledger)
+        _, reused = self.evaluator.evaluate(
+            self.backend, history, self.cache, self.data.V, self.ledger
+        )
         self.assertTrue(reused)
         self.assertEqual(self.ledger.used["search"].E, 1)
         data2 = synthetic_split("V", "0", 1, "a", 88)
         self.evaluator.evaluate(self.backend, history, self.cache, data2, self.ledger)
         self.assertEqual(self.ledger.used["search"].E, 2)
         self.backend.execution += "changed"
-        _, reused = self.evaluator.evaluate(self.backend, history, self.cache, self.data.V, self.ledger)
+        _, reused = self.evaluator.evaluate(
+            self.backend, history, self.cache, self.data.V, self.ledger
+        )
         self.assertFalse(reused)
         with self.assertRaises(ValueError):
-            self.evaluator.evaluate(self.backend, history, self.cache, self.data.A, self.ledger)
+            self.evaluator.evaluate(
+                self.backend, history, self.cache, self.data.A, self.ledger
+            )
 
     def test_model_base_and_tensor_changes_invalidate_reuse(self):
         initial = self.evaluator.key(self.backend, self.state, self.data.V)
         model = self.backend.assembly(self.state, self.cache, mode="refine")
         model.ports["0"].local.up.weight.data.fill_(1)
         changed = model.snapshot(self.state)
-        self.assertNotEqual(initial, self.evaluator.key(self.backend, changed, self.data.V))
+        self.assertNotEqual(
+            initial, self.evaluator.key(self.backend, changed, self.data.V)
+        )
         self.data.V.batches[0]["img"].add_(1)
-        self.assertNotEqual(initial, self.evaluator.key(self.backend, self.state, self.data.V))
+        self.assertNotEqual(
+            initial, self.evaluator.key(self.backend, self.state, self.data.V)
+        )
         key = self.evaluator.key(self.backend, self.state, self.data.V)
         next(self.backend.base.parameters()).data.add_(1)
-        self.assertNotEqual(key, self.evaluator.key(self.backend, self.state, self.data.V))
+        self.assertNotEqual(
+            key, self.evaluator.key(self.backend, self.state, self.data.V)
+        )
 
     def test_incomplete_evaluation_charges_work_without_completed_E(self):
-        with patch.object(self.backend, "score", side_effect=RuntimeError("interrupted")):
+        with patch.object(
+            self.backend, "score", side_effect=RuntimeError("interrupted")
+        ):
             with self.assertRaises(RuntimeError):
-                self.evaluator.evaluate(self.backend, self.state, self.cache, self.data.V, self.ledger)
+                self.evaluator.evaluate(
+                    self.backend, self.state, self.cache, self.data.V, self.ledger
+                )
         self.assertEqual(self.ledger.used["search"].E, 0)
         self.assertGreater(self.ledger.used["search"].W, 0)
-        self.evaluator.evaluate(self.backend, self.state, self.cache, self.data.V, self.ledger)
-        self.evaluator.evaluate(self.backend, self.state, self.cache, self.data.V, self.ledger, reuse=False)
+        self.evaluator.evaluate(
+            self.backend, self.state, self.cache, self.data.V, self.ledger
+        )
+        self.evaluator.evaluate(
+            self.backend, self.state, self.cache, self.data.V, self.ledger, reuse=False
+        )
         self.assertEqual(self.ledger.used["search"].E, 1)
 
     def test_scene_role_and_online_history_gates(self):
-        base = dict(image="a", image_sha256="x", scene_id="s", role="D", domain="fog", client="0", stage=1)
+        base = dict(
+            image="a",
+            image_sha256="x",
+            scene_id="s",
+            role="D",
+            domain="fog",
+            client="0",
+            stage=1,
+        )
         self.assertEqual(validate_registry([base])["scenes"], 1)
         with self.assertRaises(ValueError):
             validate_registry([base], formal=True)
         with self.assertRaises(ValueError):
-            validate_registry([base, {**base, "image": "b", "role": "T", "client": "1"}])
+            validate_registry(
+                [base, {**base, "image": "b", "role": "T", "client": "1"}]
+            )
         with self.assertRaises(ValueError):
             validate_registry([base, {**base, "image": "b", "stage": 2}])
         with self.assertRaises(ValueError):
@@ -494,10 +712,25 @@ class EvaluationAndReportingTests(Fixture):
             detection_ap([perfect], [target[:0]])
 
     def test_deployed_retention_values_and_model_identity(self):
-        rows = [dict(seed=1001, client="0", stage=t, current_domain=c, domain=d, score=s, deployed=h)
-                for t, c, d, s, h in [(1, "a", "a", 0.7, "m1"), (2, "b", "a", 0.6, "m2"),
-                                      (2, "b", "b", 0.8, "m2"), (3, "c", "a", 0.5, "m3"),
-                                      (3, "c", "b", 0.9, "m3"), (3, "c", "c", 0.4, "m3")]]
+        rows = [
+            dict(
+                seed=1001,
+                client="0",
+                stage=t,
+                current_domain=c,
+                domain=d,
+                score=s,
+                deployed=h,
+            )
+            for t, c, d, s, h in [
+                (1, "a", "a", 0.7, "m1"),
+                (2, "b", "a", 0.6, "m2"),
+                (2, "b", "b", 0.8, "m2"),
+                (3, "c", "a", 0.5, "m3"),
+                (3, "c", "b", 0.9, "m3"),
+                (3, "c", "c", 0.4, "m3"),
+            ]
+        ]
         metrics = retention(rows)
         self.assertAlmostEqual(metrics[-1]["seen"], 0.6)
         self.assertAlmostEqual(metrics[-1]["forget"], 0.1)
@@ -523,7 +756,10 @@ class EvaluationAndReportingTests(Fixture):
     def test_whole_group_partition_shared_targets_and_replay(self):
         targets = shared_targets(1001, 2, 2)
         np.testing.assert_allclose(targets.sum(1), 1)
-        groups = [{"id": str(i), "images": i + 1, "class_boxes": [i + 1, 5 - i]} for i in range(4)]
+        groups = [
+            {"id": str(i), "images": i + 1, "class_boxes": [i + 1, 5 - i]}
+            for i in range(4)
+        ]
         a = assign_groups(groups, targets, 1001, 20)
         b = assign_groups(groups, targets, 1001, 20)
         self.assertEqual(a, b)
@@ -535,9 +771,15 @@ class EvaluationAndReportingTests(Fixture):
     def test_table_interface_keeps_missing_blank_and_rejects_fixture_AP(self):
         with tempfile.TemporaryDirectory() as folder:
             export_tables([], folder)
-            self.assertIn("softcas,ControlledFog/YOLOv8n,0,,", Path(folder, "T2_primary.csv").read_text(encoding="utf-8-sig"))
+            self.assertIn(
+                "softcas,ControlledFog/YOLOv8n,0,,",
+                Path(folder, "T2_primary.csv").read_text(encoding="utf-8-sig"),
+            )
             with self.assertRaises(ValueError):
-                export_tables([{"purpose": "SYNTHETIC_BEHAVIOR_ONLY", "metric": "AP50:95"}], folder)
+                export_tables(
+                    [{"purpose": "SYNTHETIC_BEHAVIOR_ONLY", "metric": "AP50:95"}],
+                    folder,
+                )
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 """Append-only progress records: pre-action inputs are durable before execution."""
+
 from __future__ import annotations
 import os
 import threading
@@ -24,10 +25,15 @@ class Journal:
 class DurableRecords(list):
     def __init__(self, path):
         import json
+
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.lock = threading.RLock()
-        values = [json.loads(line) for line in self.path.read_bytes().splitlines()] if self.path.is_file() else []
+        values = (
+            [json.loads(line) for line in self.path.read_bytes().splitlines()]
+            if self.path.is_file()
+            else []
+        )
         super().__init__(values)
 
     def append(self, value):

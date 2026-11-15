@@ -1,0 +1,14 @@
+{
+  "extends": "native_r1000.json",
+  "purpose": "DEVELOPMENT",
+  "features": {
+    "schema": "port_context_v2",
+    "donor_vocabulary": []
+  },
+  "_development_requirements": [
+    "Compare against aggregate_v1 using independent DEV seeds only",
+    "Freeze observed donor vocabulary and scales before evaluation; unseen versions use unknown count",
+    "Increased dimension changes controller cost and coverage; re-lock lambda, kappa and cost profile",
+    "Do not replace existing aggregate_v1 results or promote synthetic checks into detector evidence"
+  ]
+}

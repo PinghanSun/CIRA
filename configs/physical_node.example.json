@@ -1,5 +1,4 @@
 {
-  "_status": "Distributed node schema. Set a shared future UTC epoch and real peer addresses before explicit execution.",
   "name": "ACDC_node0_development",
   "dataset": "ACDC",
   "detector": "YOLOv8n",

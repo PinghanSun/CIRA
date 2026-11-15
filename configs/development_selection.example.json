@@ -1,5 +1,4 @@
 {
-  "_status": "ACTUAL_NATIVE_DEV_RESULTS_REQUIRED: all 8 Local, 4 matched-rate Serial and 7 controller choices need three seeds per cell.",
   "protocol": "native_paper_r1000",
   "base_directory": ".",
   "records": [],

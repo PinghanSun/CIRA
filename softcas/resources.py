@@ -1,4 +1,5 @@
 """Actual ledger with separate release reserve and unique transfer accounting."""
+
 from __future__ import annotations
 import math
 import time
@@ -44,6 +45,7 @@ class Ledger:
         self.runtime = None
         self.meter_policy = None
         self.wall_anchors = {}
+        self.reservations = {}
 
     def begin(self, scope="search"):
         with self.lock:
@@ -53,7 +55,9 @@ class Ledger:
         with self.lock:
             anchor = self.wall_anchors.pop(scope, None)
             if anchor is not None:
-                gap = max(0, time.monotonic() - anchor[0] + anchor[1] - self.used[scope].W)
+                gap = max(
+                    0, time.monotonic() - anchor[0] + anchor[1] - self.used[scope].W
+                )
                 if gap:
                     self.charge("wall_clock_unbilled", Cost(W=gap), scope)
 
@@ -63,9 +67,30 @@ class Ledger:
             if scope in self.wall_anchors:
                 anchor, base_used = self.wall_anchors[scope]
                 elapsed = base_used + time.monotonic() - anchor
-                remaining = Cost(remaining.F, remaining.E, remaining.B,
-                                 self.limits[scope].W - max(self.used[scope].W, elapsed))
+                remaining = Cost(
+                    remaining.F,
+                    remaining.E,
+                    remaining.B,
+                    self.limits[scope].W - max(self.used[scope].W, elapsed),
+                )
+            for (reserved_scope, _), cost in self.reservations.items():
+                if reserved_scope == scope:
+                    remaining = remaining - cost
             return remaining
+
+    def reserve(self, token, cost, scope="search"):
+        """Hold an allowance for unfinished work, without charging estimated cost."""
+        with self.lock:
+            key = (scope, token)
+            if key in self.reservations:
+                raise ValueError("Reservation token already held")
+            if not cost.fits(self.remaining(scope)):
+                raise ExecutionStopped("Insufficient allowance for reserved tail work")
+            self.reservations[key] = cost
+
+    def unreserve(self, token, scope="search"):
+        with self.lock:
+            return self.reservations.pop((scope, token), Cost())
 
     def guard(self, next_cost=Cost(), scope="search"):
         remaining = self.remaining(scope)
@@ -77,22 +102,37 @@ class Ledger:
             raise ValueError("Negative charge")
         with self.lock:
             self.used[scope] = self.used[scope] + cost
-            self.events.append({"reason": reason, "scope": scope, "cost": asdict(cost),
-                                "time": time.time(), **metadata})
+            self.events.append(
+                {
+                    "reason": reason,
+                    "scope": scope,
+                    "cost": asdict(cost),
+                    "time": time.time(),
+                    **metadata,
+                }
+            )
 
     def violations(self):
-        return {scope: [r for r in ("F", "E", "B", "W")
-                        if getattr(self.used[scope], r) > getattr(limit, r)]
-                for scope, limit in self.limits.items()}
+        return {
+            scope: [
+                r
+                for r in ("F", "E", "B", "W")
+                if getattr(self.used[scope], r) > getattr(limit, r)
+            ]
+            for scope, limit in self.limits.items()
+        }
 
 
 class TransferJournal:
     """Network count counts sender Tx once; node ledgers independently keep Tx/Rx."""
+
     def __init__(self):
         self.records = {}
 
     def add(self, transfer_id, sender, receiver, size, kind, timestamp):
-        record = dict(sender=sender, receiver=receiver, bytes=size, kind=kind, time=timestamp)
+        record = dict(
+            sender=sender, receiver=receiver, bytes=size, kind=kind, time=timestamp
+        )
         if transfer_id in self.records:
             if self.records[transfer_id] != record:
                 raise ValueError("Transfer ID reused for different transmission")

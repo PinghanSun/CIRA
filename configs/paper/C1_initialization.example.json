@@ -1,0 +1,35 @@
+{
+  "condition": "C1",
+  "detector": "YOLOv8n",
+  "seed": 1001,
+  "device": "cuda:0",
+  "labeled_manifest": null,
+  "validation_manifest": null,
+  "unlabeled_manifest": null,
+  "initial_checkpoint": null,
+  "initial_checkpoint_type": "coco_compatible",
+  "allow_random_initialization": false,
+  "output": null,
+  "image_size": 640,
+  "batch_size": null,
+  "expected_counts": {
+    "labeled_rgb": 2160,
+    "validation_rgb": 60,
+    "unlabeled_rgb": 0,
+    "labeled_bases": 540
+  },
+  "recipe": {
+    "updates": null,
+    "lr": null,
+    "validation_interval": null,
+    "teacher_momentum": null,
+    "pseudo_confidence": null,
+    "unlabeled_weight": null,
+    "weight_decay": 0.0,
+    "betas": [
+      0.9,
+      0.999
+    ],
+    "epsilon": 1e-08
+  }
+}

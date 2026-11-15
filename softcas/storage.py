@@ -1,4 +1,5 @@
 """Atomic immutable files, bounded checkpoint retention, and deployment bundles."""
+
 from __future__ import annotations
 import hashlib
 import io
@@ -44,7 +45,9 @@ class BoundedStore:
         return self.root / key
 
     def keys(self):
-        return sorted(p.name for p in self.root.iterdir() if p.is_file() and len(p.name) == 64)
+        return sorted(
+            p.name for p in self.root.iterdir() if p.is_file() and len(p.name) == 64
+        )
 
     @property
     def bytes(self):
@@ -64,8 +67,12 @@ class BoundedStore:
         if hashlib.sha256(data).hexdigest() != key:
             raise ValueError("Persistent object checksum mismatch")
         if self.ledger:
-            self.ledger.charge("persistent_storage_read", Cost(W=time.perf_counter() - start),
-                               disk_bytes=len(data), object_hash=key)
+            self.ledger.charge(
+                "persistent_storage_read",
+                Cost(W=time.perf_counter() - start),
+                disk_bytes=len(data),
+                object_hash=key,
+            )
         return data
 
     def put(self, data, scope="search"):
@@ -78,7 +85,10 @@ class BoundedStore:
         if len(data) > self.transient_capacity or len(data) > self.capacity:
             raise ExecutionStopped("Object/transient-storage limit")
         pinned = set().union(*self.pins.values()) if self.pins else set()
-        candidates = sorted((k for k in self.keys() if k not in pinned), key=lambda k: (self.touched.get(k, 0), k))
+        candidates = sorted(
+            (k for k in self.keys() if k not in pinned),
+            key=lambda k: (self.touched.get(k, 0), k),
+        )
         total, victims = self.bytes + len(data), []
         for victim in candidates:
             if total <= self.capacity:
@@ -94,8 +104,14 @@ class BoundedStore:
             atomic_write(path, data)
         finally:
             if self.ledger:
-                self.ledger.charge("persistent_storage_write", Cost(W=time.perf_counter() - start), scope,
-                                   disk_bytes=len(data), object_hash=key, evicted=victims)
+                self.ledger.charge(
+                    "persistent_storage_write",
+                    Cost(W=time.perf_counter() - start),
+                    scope,
+                    disk_bytes=len(data),
+                    object_hash=key,
+                    evicted=victims,
+                )
         self.counter += 1
         self.touched[key] = self.counter
         return key
@@ -110,23 +126,41 @@ class CheckpointStore:
             self.index = json.loads(self.index_file.read_bytes())
 
     def save(self, state):
-        payload = canonical({"hash": state.hash, "state": __import__("dataclasses").asdict(state)})
+        payload = canonical(
+            {"hash": state.hash, "state": __import__("dataclasses").asdict(state)}
+        )
         key = self.store.put(payload)
         self.index[state.hash] = key
-        self.index = {s: k for s, k in self.index.items() if self.store._path(k).is_file()}
+        self.index = {
+            s: k for s, k in self.index.items() if self.store._path(k).is_file()
+        }
         atomic_write(self.index_file, canonical(self.index))
         return key
 
     def pin(self, token, states):
         states = tuple(states)
-        payloads = [canonical({"hash": s.hash, "state": __import__("dataclasses").asdict(s)}) for s in states]
-        if sum(len(p) for p in {hashlib.sha256(p).hexdigest(): p for p in payloads}.values()) > self.store.capacity:
-            raise ExecutionStopped("Protected archive checkpoints exceed persistent capacity")
-        existing = [self.index[s.hash] for s in states if s.hash in self.index and self.store._path(self.index[s.hash]).is_file()]
+        payloads = [
+            canonical({"hash": s.hash, "state": __import__("dataclasses").asdict(s)})
+            for s in states
+        ]
+        if (
+            sum(
+                len(p)
+                for p in {hashlib.sha256(p).hexdigest(): p for p in payloads}.values()
+            )
+            > self.store.capacity
+        ):
+            raise ExecutionStopped(
+                "Protected archive checkpoints exceed persistent capacity"
+            )
+        existing = [
+            self.index[s.hash]
+            for s in states
+            if s.hash in self.index and self.store._path(self.index[s.hash]).is_file()
+        ]
         self.store.pin(token, existing)
         keys = []
         for state in states:
-            # Protect the existing set before admitting another checkpoint.
             key = self.save(state)
             keys.append(key)
             self.store.pin(token, existing + keys)
@@ -135,22 +169,32 @@ class CheckpointStore:
     def load(self, state_hash):
         key = self.index[state_hash]
         data = self.store.get(key)
-        # The index is a lookup aid, not authority for the requested state.
-        # Decode these checksum-verified bytes rather than reopening the file.
+
         return State.read(data, expected_hash=state_hash)
 
 
 def bundle_bytes(backend, candidate, incumbent, cache, context):
     files = {}
     for state in (candidate, incumbent):
-        files["states/" + state.hash + ".json"] = canonical({"hash": state.hash, "state": __import__("dataclasses").asdict(state)})
+        files["states/" + state.hash + ".json"] = canonical(
+            {"hash": state.hash, "state": __import__("dataclasses").asdict(state)}
+        )
         for key in state.C:
             files["packages/" + key + ".json"] = cache.get(key).wire
-    manifest = {"schema": 1, "base_sha256": backend.identity, "image_size": backend.image_size,
-                "ports": [int(name.split(".")[-1]) for name in backend.port_modules],
-                "labels": list(backend.specs[0].labels), "preprocessing": backend.specs[0].preprocess,
-                "candidate": candidate.hash, "incumbent": incumbent.hash, "context": context,
-                "files": {name: hashlib.sha256(data).hexdigest() for name, data in files.items()}}
+    manifest = {
+        "schema": 1,
+        "base_sha256": backend.identity,
+        "image_size": backend.image_size,
+        "ports": [int(name.split(".")[-1]) for name in backend.port_modules],
+        "labels": list(backend.specs[0].labels),
+        "preprocessing": backend.specs[0].preprocess,
+        "candidate": candidate.hash,
+        "incumbent": incumbent.hash,
+        "context": context,
+        "files": {
+            name: hashlib.sha256(data).hexdigest() for name, data in files.items()
+        },
+    }
     files["bundle.json"] = canonical(manifest)
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:

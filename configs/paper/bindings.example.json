@@ -1,0 +1,58 @@
+{
+  "formal": true,
+  "cells": {},
+  "conditions": {},
+  "external_adapters": {},
+  "runs_root": null,
+  "development_lock": null,
+  "archived_development_lock": null,
+  "execution_topology": "physical_nodes",
+  "clients": [
+    "0",
+    "1",
+    "2",
+    "3"
+  ],
+  "physical_nodes": {
+    "0": {
+      "endpoint": {
+        "host": null,
+        "port": null
+      },
+      "overrides": {}
+    },
+    "1": {
+      "endpoint": {
+        "host": null,
+        "port": null
+      },
+      "overrides": {}
+    },
+    "2": {
+      "endpoint": {
+        "host": null,
+        "port": null
+      },
+      "overrides": {}
+    },
+    "3": {
+      "endpoint": {
+        "host": null,
+        "port": null
+      },
+      "overrides": {}
+    }
+  },
+  "epoch_start_unix": null,
+  "trajectory_spacing_seconds": null,
+  "cell_key_format": "dataset/detector/initialization/seed",
+  "cell_template": {
+    "checkpoint": null,
+    "registry": null,
+    "development_registry": null,
+    "detector_config": null,
+    "contact_trace": null,
+    "overrides": {},
+    "development_lock": null
+  }
+}

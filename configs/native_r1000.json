@@ -1,7 +1,6 @@
 {
   "extends": "jetson_updates.json",
   "purpose": "DEVELOPMENT",
-  "_status": "NATIVE_R1000_REFERENCE_NOT_EXECUTED: F/W and feature scales need development calibration; zero unbound F/W disables execution. Native online fitting is on four Orin Nano 8GB peers; RTX 5080 is SOURCE/offline only.",
   "proposal_protocol": "native_r1000",
   "fitting": {
     "unit": "epochs",
@@ -65,14 +64,6 @@
     "minimum_free_bytes": 0
   },
   "retained_checkpoints": 8,
-  "protocol_pending": [
-    "calibrated F/W allowances and cost_profile",
-    "development-frozen feature scales",
-    "prepared eight-class base hashes",
-    "scene/role support",
-    "four peer addresses and shared epoch",
-    "target runtime binding"
-  ],
   "confirmed": {},
   "report_measurement_sessions": 3
 }

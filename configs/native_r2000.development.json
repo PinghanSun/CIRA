@@ -1,0 +1,28 @@
+{
+  "extends": "native_r1000.json",
+  "purpose": "DEVELOPMENT",
+  "fitting": {
+    "unit": "epochs",
+    "stage_epochs": 1000,
+    "local_epochs": 32,
+    "receiving_epochs": 16
+  },
+  "round_budget": {
+    "per_client": 2000,
+    "stages": 4,
+    "epochs_per_round": 2
+  },
+  "fit_batch_size": 16,
+  "attempts": 48,
+  "budgets": {
+    "search": {
+      "F": 0,
+      "E": 49,
+      "B": 33554432,
+      "W": 0
+    }
+  },
+  "budget_clock_definition": "2000 is a cumulative fitting-budget coordinate; one coordinate permits up to two D epochs. An action may consume multiple coordinates. It is not 2000 required communication events, and M=48 does not allocate periodic time slots.",
+  "block_definition": "Configuration/receiving blocks cap at 32/16 epochs, charged to the cumulative 1000-epoch stage allowance; nominal 4000/client and 16000/fleet are upper bounds, not executed counts.",
+  "confirmed": {}
+}

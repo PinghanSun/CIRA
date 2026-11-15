@@ -1,0 +1,10 @@
+{
+  "cocoeval.py": {
+    "url": "https://raw.githubusercontent.com/cocodataset/cocoapi/master/PythonAPI/pycocotools/cocoeval.py",
+    "sha256": "e514af401848d5a4cc5d3512bd93d2c317f92272c6d30f218e0f00b7b4110534"
+  },
+  "LICENSE.txt": {
+    "url": "https://raw.githubusercontent.com/cocodataset/cocoapi/master/license.txt",
+    "sha256": "bd8ef15597b3b292f3bb0feed9701c1ace5bcebe07f28fb5047ec8d3d89471b1"
+  }
+}

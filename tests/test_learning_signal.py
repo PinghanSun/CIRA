@@ -1,4 +1,5 @@
 """Learning checks on real CPU tensor execution, not synthetic gain labels."""
+
 import unittest
 import torch
 
@@ -16,8 +17,13 @@ class LearningSignalTests(unittest.TestCase):
     def setup_fixture(self):
         backend = TeacherBackend()
         cache = PackageCache(1000000, backend.specs)
-        state = initial_state(backend, cache, Structure((1, 0, 0, 0, 0, 0), 1/8),
-                              FitSettings(1e-3, 1e-4), 42)
+        state = initial_state(
+            backend,
+            cache,
+            Structure((1, 0, 0, 0, 0, 0), 1 / 8),
+            FitSettings(1e-3, 1e-4),
+            42,
+        )
         return backend, cache, state
 
     def test_real_positive_and_negative_generalization_probe(self):
@@ -25,9 +31,15 @@ class LearningSignalTests(unittest.TestCase):
         V = teacher_split("V", "probe", 1, "0", 500)
         results = []
         for direction in (1.0, -1.0):
-            child, probe = fitting_probe(backend, state, cache,
-                teacher_split("D", "probe", 1, "0", 200, target_direction=direction), V,
-                steps=32, optimizer_settings={"name": "AdamW", "weight_decay": 0.0})
+            child, probe = fitting_probe(
+                backend,
+                state,
+                cache,
+                teacher_split("D", "probe", 1, "0", 200, target_direction=direction),
+                V,
+                steps=32,
+                optimizer_settings={"name": "AdamW", "weight_decay": 0.0},
+            )
             self.assertTrue(probe["base_unchanged"])
             self.assertGreater(probe["local_parameter_delta_l2"], 0)
             self.assertGreater(probe["steps"][0]["gradient_l2"], 0)
@@ -47,7 +59,10 @@ class LearningSignalTests(unittest.TestCase):
         model = backend.assembly(state, cache, mode="import")
         self.assertEqual(backend.score(model, V), backend.score(model, V))
         with torch.no_grad():
-            errors = [(model(b["img"]).double() - b["target"].double()).flatten() for b in V.batches]
+            errors = [
+                (model(b["img"]).double() - b["target"].double()).flatten()
+                for b in V.batches
+            ]
             expected = 1 / (1 + float(torch.cat(errors).square().mean()))
         self.assertAlmostEqual(backend.score(model, V), expected, places=14)
 
