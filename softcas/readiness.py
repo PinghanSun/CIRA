@@ -84,5 +84,5 @@ def check_readiness(config_directory, bindings):
         "ready": all(x["ready"] for x in checks),
         "training_started": False,
         "device_or_network_probe_performed": False,
-        "interpretation": "Code paths exist. Pending items require actual DEV outputs, data and device calibration, not invented constants.",
+        "interpretation": "Use the checks to bind local data, development results and calibrated device settings.",
     }

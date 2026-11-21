@@ -1,33 +1,29 @@
 # CIRA
 
-Composition-Informed Receiver Adaptation.
+**Coupled Adapter Configuration and Composition for Continual Detector Adaptation**
 
-PyTorch code for receiver-side adapter composition, budgeted search, and continual object detection.
+Composition-Informed Receiver Adaptation (CIRA) is a PyTorch implementation for supervised domain-incremental object detection at decentralized edge nodes. Within an adaptation stage, local configuration revisions and peer membership revisions can build on each other's evaluated detector states. A ridge model estimates the gain of each trial over its parent to guide trial selection under a shared resource budget.
 
-## Installation
+![CIRA overview: coupled configuration and composition under a shared budget](figures/overview.png)
+
+## Installation and configuration
+
+From the repository root, install the package with Python 3.12 and PyTorch. Add the YOLO and plotting extras for detector runs and analysis.
 
 ```bash
 python -m pip install -e ".[yolo,plots]"
-```
-
-## Usage
-
-```bash
 python -m softcas.paper_cli export --output runs/configs
-python -m softcas.paper_cli matrix --output runs/matrix.json
-python -m softcas.paper_cli compile --matrix runs/matrix.json --bindings configs/bindings.private.json --output runs/compiled
-python -m softcas.paper_cli run-job --plan runs/compiled/compiled.json --id JOB_ID --node-id 0
+python -m softcas.paper_cli matrix --blocks primary BDD --output runs/matrix.json
 ```
 
-Use `configs/paper/` as the experiment template. Store local paths and device settings in a `*.private.json` file.
+The [detector workflow](docs/workflow.md) covers dataset preparation, development selection, binding local checkpoints and device settings, and launching a node. The repository includes configurations for ACDC, ControlledFog and BDD100K, and detector profiles for YOLOv8n, YOLO11n and YOLO26n.
 
-## Supplementary studies
+## Reduced feature model
+
+The reduced feature model runs on generated features. Its outputs report feature-model scores.
 
 ```bash
-python studies/run.py list
 python studies/run.py feature --case-id CL-HYP-00001 --output runs/feature
-python studies/run.py fixed-summary --output runs/summary
-python studies/run.py continuation --output runs/continuation
 ```
 
 ## Tests
@@ -36,15 +32,12 @@ python studies/run.py continuation --output runs/continuation
 python -m unittest discover -s tests -q
 ```
 
-## Structure
+The tests check state inheritance, resource accounting, runtime interfaces and reporting. The detector and plotting tests use the `yolo` and `plots` extras.
 
-```text
-softcas/      Method, runtime, and baseline implementations
-configs/      Experiment and device templates
-studies/      Feature-model and numerical studies
-analysis/     Plotting and table export
-examples/     Small runnable examples
-tests/        Unit and integration tests
-```
-
-See [the workflow](docs/workflow.md) for data preparation and development commands.
+| Directory | Contents |
+| --- | --- |
+| [`softcas/`](softcas/) | Adapter revisions, state archive, trial selection, runtime and baselines |
+| [`configs/`](configs/) | Detector, experiment and device configuration templates |
+| [`studies/`](studies/) | Reduced feature model and its evaluation code |
+| [`analysis/`](analysis/) | Analysis and plotting of bound experiment outputs |
+| [`tests/`](tests/) | Unit and integration tests |
