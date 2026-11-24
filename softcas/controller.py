@@ -14,6 +14,7 @@ class Scored:
     ap: float
     utility: float
     family: str
+    from_stage_revision: bool = False
 
 
 class Archive:

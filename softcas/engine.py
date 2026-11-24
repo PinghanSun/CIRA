@@ -497,6 +497,8 @@ def run_stage(
             "features": list(f),
             "parent_family": parent.family,
             "child_family": a.family,
+            "parent_is_stage_entry": a.parent == archive.incumbent,
+            "parent_from_stage_revision": parent.from_stage_revision,
             "inherits_parent": a.kind != "import",
             "cross_family_parent": a.kind != "import"
             and parent.family not in ("incumbent", a.family),
@@ -538,7 +540,15 @@ def run_stage(
         gain = utility - parent.utility if result.status == "complete" else 0.0
         if result.status == "complete":
             try:
-                archive.insert(Scored(result.state, result.score, utility, a.family))
+                archive.insert(
+                    Scored(
+                        result.state,
+                        result.score,
+                        utility,
+                        a.family,
+                        from_stage_revision=a.kind != "import",
+                    )
+                )
             except (RuntimeError, OSError) as exc:
                 result = replace(
                     result,
@@ -582,6 +592,11 @@ def run_stage(
             stage_fit_step_limit=fit_limit,
             epoch_shuffle_seeds=list(result.epoch_seeds),
             archive_after=sorted(archive.items),
+            child_retained=(
+                result.state.hash in archive.items
+                if result.status == "complete"
+                else None
+            ),
             champion_after=archive.champion.state.hash,
             feasibility=ledger.violations(),
         )

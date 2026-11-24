@@ -1,6 +1,6 @@
 # Detector workflow
 
-The CPU example in the [README](../README.md) runs with generated inputs. The detector workflow uses local image and annotation files, detector checkpoints, resource calibration and node settings.
+The detector workflow uses local image and annotation files, detector checkpoints, resource calibration and node settings.
 
 ## Prepare the data and initialization
 
@@ -13,6 +13,8 @@ Export the templates with `python -m softcas.paper_cli export --output runs/conf
 | Convert BDD100K annotations | [BDD100K conversion](../configs/paper/BDD100K_conversion.example.json) | `python -m softcas.paper_cli convert-bdd --spec runs/bdd.private.json` |
 | Build the single-exposure allocation | [Exposure](../configs/paper/single_exposure.example.json) | `python -m softcas.paper_cli single-exposure --spec runs/exposure.private.json` |
 | Prepare a base detector | [C0](../configs/paper/C0_initialization.example.json), [C1](../configs/paper/C1_initialization.example.json), [C2](../configs/paper/C2_initialization.example.json) | `python -m softcas.paper_cli initialize --spec runs/initialization.private.json` |
+
+The [experiment guide](experiments.md) lists matrix commands for the paired receiver study.
 
 The data roles are D for fitting, V for candidate selection, A for release audit and T for reporting. Peer exchange uses versioned adapter packages.
 

@@ -18,3 +18,9 @@ jobs:
       - run: ruff check .
       - run: ruff format --check .
       - run: python -m unittest discover -s tests -q
+      - name: Regenerate numerical studies
+        run: |
+          python -m softcas.paper_cli matrix --receiver-study core --output runs/receiver/core.json
+          python -m softcas.paper_cli matrix --receiver-study extended --output runs/receiver/extended.json
+          python studies/continuation/generate.py --core-matrix runs/receiver/core.json --extended-matrix runs/receiver/extended.json --output runs/continuation
+          python studies/time_and_revisits/generate.py --inputs runs/continuation/tables.json --output runs/time_revisit_tables.json

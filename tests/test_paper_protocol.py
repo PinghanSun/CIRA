@@ -25,6 +25,44 @@ torch.set_num_threads(1)
 
 
 class CurrentProtocolTests(unittest.TestCase):
+    def test_receiver_study_keeps_the_pilot_separate_and_pairs_each_arm(self):
+        from softcas.paper_protocol import build_receiver_study
+        from softcas.state import digest
+
+        pilot = build_receiver_study("pilot")
+        self.assertEqual(pilot["unique_jobs"], 2)
+        self.assertEqual(
+            {
+                (j["recipe"]["dataset"], j["recipe"]["seed"], j["recipe"]["phase"])
+                for j in pilot["jobs"]
+            },
+            {("ACDC", 9001, "development")},
+        )
+        core = build_receiver_study("core")
+        self.assertEqual(core["unique_jobs"], 48)
+        self.assertEqual(core["protocol_sha256"], digest(settings()))
+        self.assertTrue(all(j["id"] == digest(j["recipe"]) for j in core["jobs"]))
+        for dataset in ("ACDC", "ControlledFog"):
+            for seed in range(1001, 1009):
+                recipes = [
+                    j["recipe"]
+                    for j in core["jobs"]
+                    if (j["recipe"]["dataset"], j["recipe"]["seed"]) == (dataset, seed)
+                ]
+                self.assertEqual(
+                    {(r["method"], r["ablation"]) for r in recipes},
+                    {
+                        ("softcas", "none"),
+                        ("softcas", "no_handoff"),
+                        ("serial", "none"),
+                    },
+                )
+        self.assertEqual(
+            build_receiver_study("extended", range(1001, 1009))["unique_jobs"], 80
+        )
+        with self.assertRaises(ValueError):
+            build_receiver_study("core", [9001])
+
     def test_deduplicated_primary_and_initialization_controls(self):
         p = build_matrix(blocks=["primary", "U", "BDD"])
         self.assertEqual(p["view_counts"], {"BDD": 25, "U": 150, "primary": 420})

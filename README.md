@@ -18,6 +18,10 @@ python -m softcas.paper_cli matrix --blocks primary BDD --output runs/matrix.jso
 
 The [detector workflow](docs/workflow.md) covers dataset preparation, development selection, binding local checkpoints and device settings, and launching a node. The repository includes configurations for ACDC, ControlledFog and BDD100K, and detector profiles for YOLOv8n, YOLO11n and YOLO26n.
 
+## Experiment reproduction
+
+The [experiment guide](docs/experiments.md) covers the paired receiver study, the time-budget model, the BDD100K revisit extension and the scripts for recomputing results and rebuilding Supplementary Figures S2 and S3.
+
 ## Reduced feature model
 
 The reduced feature model runs on generated features. Its outputs report feature-model scores.
@@ -38,6 +42,6 @@ The tests check state inheritance, resource accounting, runtime interfaces and r
 | --- | --- |
 | [`softcas/`](softcas/) | Adapter revisions, state archive, trial selection, runtime and baselines |
 | [`configs/`](configs/) | Detector, experiment and device configuration templates |
-| [`studies/`](studies/) | Reduced feature model and its evaluation code |
+| [`studies/`](studies/) | Reduced feature model and numerical scenario generators |
 | [`analysis/`](analysis/) | Analysis and plotting of bound experiment outputs |
 | [`tests/`](tests/) | Unit and integration tests |

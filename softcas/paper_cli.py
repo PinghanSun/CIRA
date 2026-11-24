@@ -11,7 +11,10 @@ def main():
     x = s.add_parser("export")
     x.add_argument("--output", required=True)
     x = s.add_parser("matrix")
-    x.add_argument("--blocks", nargs="+")
+    group = x.add_mutually_exclusive_group()
+    group.add_argument("--blocks", nargs="+")
+    group.add_argument("--receiver-study", choices=("pilot", "core", "extended"))
+    x.add_argument("--receiver-seeds", nargs="+", type=int)
     x.add_argument("--output", required=True)
     x = s.add_parser("compile")
     x.add_argument("--matrix", required=True)
@@ -49,7 +52,7 @@ def main():
     x.add_argument("--output", required=True)
     a = p.parse_args()
     read = lambda path: json.loads(Path(path).read_text(encoding="utf-8-sig"))
-    from .paper_protocol import export, build_matrix
+    from .paper_protocol import export, build_matrix, build_receiver_study
 
     from .paths import configuration_root
 
@@ -57,7 +60,17 @@ def main():
     if a.command == "export":
         r = export(a.output, config_root)
     elif a.command == "matrix":
-        r = build_matrix(blocks=a.blocks)
+        if a.receiver_seeds and not a.receiver_study:
+            p.error("--receiver-seeds requires --receiver-study")
+        try:
+            r = (
+                build_receiver_study(a.receiver_study, a.receiver_seeds)
+                if a.receiver_study
+                else build_matrix(blocks=a.blocks)
+            )
+        except ValueError as error:
+            p.error(str(error))
+        Path(a.output).parent.mkdir(parents=True, exist_ok=True)
         Path(a.output).write_text(
             json.dumps(r, ensure_ascii=False, indent=2), encoding="utf-8"
         )

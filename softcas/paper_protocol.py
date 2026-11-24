@@ -403,6 +403,74 @@ def build_matrix(protocol=None, blocks=None):
     }
 
 
+def build_receiver_study(scope, seeds=None):
+    """Register paired YOLOv8n receiver experiments using the native protocol."""
+    if scope not in ("pilot", "core", "extended"):
+        raise ValueError("Unknown receiver study scope")
+    if scope == "pilot" and seeds is not None:
+        raise ValueError("The ACDC pilot uses the registered DEV seed 9001")
+    seeds = (
+        (DEV_SEEDS[0],)
+        if scope == "pilot"
+        else tuple(range(1001, 1009) if seeds is None else seeds)
+    )
+    if (
+        not seeds
+        or len(seeds) != len(set(seeds))
+        or any(
+            type(seed) is not int
+            or seed < 0
+            or (scope != "pilot" and seed in DEV_SEEDS)
+            for seed in seeds
+        )
+    ):
+        raise ValueError(
+            "Use distinct nonnegative reporting seeds, separate from DEV seeds"
+        )
+    arms = {("softcas", "none"), ("softcas", "no_handoff"), ("serial", "none")}
+    if scope == "extended":
+        arms.update({("softcas", "no_gain"), ("DeModCL", "none")})
+    template = build_matrix(blocks=["primary", "ablations"])
+    jobs = []
+    for job in template["jobs"]:
+        recipe = job["recipe"]
+        arm = recipe["method"], recipe["ablation"]
+        if (
+            recipe["seed"] != SEEDS[0]
+            or recipe["detector"] != "YOLOv8n"
+            or arm not in arms
+        ):
+            continue
+        if scope == "pilot" and (
+            recipe["dataset"] != "ACDC" or recipe["method"] != "softcas"
+        ):
+            continue
+        for seed in seeds:
+            paired_recipe = dict(recipe, seed=seed)
+            if scope == "pilot":
+                paired_recipe["phase"] = "development"
+            jobs.append(
+                {
+                    "id": digest(paired_recipe),
+                    "recipe": paired_recipe,
+                    "status": "not_executed",
+                    "first_block": "receiver_study",
+                }
+            )
+    return {
+        **template,
+        "receiver_study": scope,
+        "selected_seeds": list(seeds),
+        "jobs": jobs,
+        "unique_jobs": len(jobs),
+        "views": [
+            {"block": "receiver_study", "job_id": job["id"], "reused": False}
+            for job in jobs
+        ],
+        "view_counts": {"receiver_study": len(jobs)},
+    }
+
+
 def native_config(
     config_root, stage_epochs=100, attempts=16, *, seed=1001, method="softcas"
 ):

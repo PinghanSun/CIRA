@@ -440,7 +440,10 @@ class ControllerAndStageTests(Fixture):
 
     def test_reimport_incumbent_preserves_both_family_parent_eligibility(self):
         archive = Archive(self.state, 0.5, 2, self.cache)
-        archive.insert(Scored(self.state, 0.5, 0, "configuration"))
+        archive.insert(
+            Scored(self.state, 0.5, 0, "configuration", from_stage_revision=True)
+        )
+        self.assertFalse(archive.items[self.state.hash].from_stage_revision)
         self.assertEqual(
             archive.parent(random.Random(1), "collaboration").state, self.state
         )
@@ -525,6 +528,11 @@ class ControllerAndStageTests(Fixture):
         self.assertEqual(self.ledger.used["search"].E, 3)
         self.assertAlmostEqual(result.actions[1]["gain"], 0.1)
         self.assertAlmostEqual(result.actions[1]["parent_utility"], 0.1)
+        self.assertTrue(result.actions[0]["parent_is_stage_entry"])
+        self.assertFalse(result.actions[0]["parent_from_stage_revision"])
+        self.assertFalse(result.actions[1]["parent_is_stage_entry"])
+        self.assertTrue(result.actions[1]["parent_from_stage_revision"])
+        self.assertTrue(result.actions[0]["child_retained"])
 
     def test_collaboration_release_does_not_republish_unchanged_local_or_peer(self):
         key = self.put(self.package())
