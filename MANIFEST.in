@@ -1,6 +1,5 @@
 include README.md THIRD_PARTY_NOTICES.md
 recursive-include configs *.json
-include figures/overview.png
 include docs/workflow.md docs/experiments.md
 include analysis/recompute.py analysis/plot_continuation.py
 include studies/continuation/generate.py studies/continuation/supplement_sim.py

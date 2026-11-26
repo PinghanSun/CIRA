@@ -16,17 +16,6 @@ Apply the development lock and bind the registered detector inputs as described 
 
 The action records include `parent_is_stage_entry`, `parent_from_stage_revision` and `child_retained`. The last field refers to archive membership immediately after that attempt. Read `stage.json` for the deployed state after the release audit.
 
-## Recompute the manuscript summaries and figures
-
-Extract the companion data archive into `runs/companion`, with its `data/`, `data_catalog.csv` and `SHA256SUMS.txt` at that level.
-
-```bash
-python analysis/recompute.py --data-root runs/companion > runs/companion-summary.json
-python analysis/plot_continuation.py --data-root runs/companion --output runs/continuation-figures
-```
-
-The first command verifies the input hashes and recomputes the reported summaries. The second rebuilds Supplementary Figures S2 and S3 from the eight-seed scenario records.
-
 ## Regenerate the scenarios
 
 The continuation scenario uses the default eight seeds and the core and extended matrices above. Its comparison includes preset endpoint offsets and simulated action records.
@@ -41,4 +30,4 @@ The time-budget model and BDD100K revisit extension use the stage-domain referen
 python studies/time_and_revisits/generate.py --inputs runs/continuation/tables.json --output runs/time_revisit_tables.json
 ```
 
-Use the numerical outputs for comparison with the companion records. The device-model values follow the scenario cost model. The Jetson measurement protocol uses separately bound hardware and checkpoints.
+Run the [detector workflow](workflow.md) with separately bound hardware and checkpoints to collect device measurements.
